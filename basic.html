@@ -1,0 +1,977 @@
+﻿<!DOCTYPE html/> 
+<html lang="en">
+	<head>
+		<title>three.js webgl - cameras</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+        <link rel="stylesheet" type="text/css" href="style.css">
+    </head>
+    <body>
+        <!-- Nastavenia aplikacie -->
+        <div id="settings">
+            <!--<select class="settingsItem" id="DateSetSelect" onchange="setDataset(this.value)">
+                <option value="0">Hlava</option>
+                <option value="1">Ladviny</option>
+                <option value="2">Torso</option>
+            </select>-->
+            <div class="settingsItem">
+                <label>Mode select </label>
+                <select class="inputComboSettings" id="ShaderType" onchange="changeRenderType(); makeAnimate();">
+                    <option value="xray">X-Ray</option>
+                    <option value="render">Render</option>
+                    <option value="mip">MIP</option>
+                    <option value="iso">Iso-surface</option>
+                </select>
+            </div>
+            <div class="settingsItem" id="LutSetting">
+                <label >LUT setting </label>
+                <select class="inputComboSettings" id="LutSelect" onchange="setLUT(this.value)">
+                    <option value="4">Light hard tissue</option>
+                    <option value="1">Muscle</option>
+                    <option value="2">Light muscle</option>
+                    <option value="3">Hard tissue</option>
+                </select>
+            </div>
+
+            <div class="settingsItem" id="OpacitySetting">
+                <label id="OpacityLabel">Opacity multiplier</label>
+                <label id="OpacityValue">1.00</label>
+                <input class="inputSettings" type="range" id="opacitySliderBar" min="0" max="300" step="1" value="100" onChange="raycastStepChange(); speedupOnMoveStop(); makeAnimate()" onInput="setOpacityMove(); makeAnimate()" />
+            </div>
+            <div class="settingsItem" id="IsoTresholdSetting">
+                <label id="TrasholdLabel">Iso-surface density trashold </label>
+                <label id="TrasholdValue"></label>
+                <input class="inputSettings" type="range" id="trasholdSliderBar" min="0" max="100" step="1" value="95" onChange="trasholdChange(this.value); makeAnimate()" onInput="trasholdChangeMove(this.value); makeAnimate()" />
+            </div>
+            <div class="settingsItem" id="CutPlaneSetting">
+                <label id="CutPlaneLabel">Cut plane distance </label>
+                <label id="CutPlaneValue"></label>
+                <input class="inputSettings" type="range" id="cutPlaneSliderBar" min="0" max="500" step="0.1" value="10" onChange="cutPlaneDistanceChange(this.value); makeAnimate()" onInput="cutPlaneDistanceChangeMove(this.value); makeAnimate()" />
+            </div>
+
+            <div class="settingsItem">
+                <label >Data image quality</label>
+                <select class="inputComboSettings" id="QualitySelect" onchange="changeQuality(this.value)">
+                    <option value="1">Original</option>
+                    <option value="2">Medium</option>
+                    <option value="3">Low</option>
+                </select>
+            </div>
+
+            <div class="settingsItem">
+                <label id="RaycastStepLabel">Raycast step</label>
+                <label id="RaycastStepValue"></label>
+                <input class="inputSettings" type="range" id="raycastStepSliderBar" min="1" max="8" step="" value="3" onChange="raycastStepChange(this.value); makeAnimate()" onInput="    raycastStepChange(this.value); makeAnimate()" />
+            </div>
+
+            <div class="settingsItem">
+                <input id="RaycastSpeedupToogle" type='checkbox' checked='true' onclick='speedupOnMoveChange();' onInput='    speedupOnMoveChange();'>
+                <label id="RaycastSpeedupStepToogleLabel">Speed up redraw</label><br />
+            </div>
+            <div class="settingsItem">
+                <label id="RaycastSpeedupStepLabel">Speed up step</label>
+                <label id="RaycastSpeedupStepValue"></label>
+                <input class="inputSettings" type="range" id="RaycastSpeedupStepSliderBar" min="1" max="8" step="" value="6" onChange="speedupOnMoveChange(this.value);" onInput="    speedupOnMoveChange(this.value);" />
+            </div>
+            <!--<label class="settingsItem"><input type='checkbox' onclick='setBackground(this);' onInput='setBackground(this);'>Debug background</label>-->
+
+        </div>
+
+        <!-- Renderovacie okno -->
+        <div id="content">
+        </div>
+
+        <!--<canvas id="myCanvas" style="display: block; border:1px solid #d3d3d3; color: black;"></canvas>--> 
+
+        <!-- Customize functions -->
+        <script type="text/javascript">
+            //Nastavi visibilitu v UI
+            changeRenderType();
+
+            function changeRenderType() {
+
+                document.getElementById("LutSetting").style.display = "none";
+                document.getElementById("OpacitySetting").style.display = "none";
+                document.getElementById("IsoTresholdSetting").style.display = "none";
+
+                var e = document.getElementById("ShaderType");
+                var type = e.options[e.selectedIndex].value;
+
+                if (type == "render"){
+                    document.getElementById("LutSetting").style.display = "block";
+                    document.getElementById("OpacitySetting").style.display = "block";
+                }
+                else if (type == "xray"){
+                    document.getElementById("OpacitySetting").style.display = "block";
+                }
+                else if (type == "mip") {
+
+                }
+                else if (type == "iso") {
+                    document.getElementById("IsoTresholdSetting").style.display = "block";
+                }
+            }
+
+            function speedupOnMoveChange() {
+                var e = document.getElementById("RaycastSpeedupToogle");
+                raycastSpeedup = e.checked;
+
+                var e = document.getElementById("RaycastSpeedupStepSliderBar");
+                raycastSpeedupStep = raycastStepCalculation(e.value);
+
+                document.getElementById('RaycastSpeedupStepValue').innerHTML = raycastSpeedupStep.toFixed(7);
+            }
+
+            function setOpacityMove() {
+                speedupOnMoveStart();
+                setOpacity();
+            }
+            function setOpacity() {
+                alphaMulOneP = rayCastStep / opacityRaycastMultiple;
+
+                var opacity = document.getElementById("opacitySliderBar").value;
+                
+                document.getElementById('OpacityValue').innerHTML = (opacity / 100.).toFixed(2);
+                alphaMul = opacity * alphaMulOneP;
+            }
+
+            function makeAnimate() {
+                animate();
+            }
+
+            function raycastStepCalculation(uiValue) {
+                //0-10 hodnoty
+                //stredna je 5 => 0.0015
+                var referenceValue = 0.0015;
+
+                var value = uiValue - 5;
+                if (value > 0)
+                    return referenceValue * Math.pow(2, value);
+                else if (value < 0)
+                    return referenceValue / Math.pow(2, value * -1);
+                else
+                    return referenceValue;
+            }
+
+            function raycastStepChange() {
+                var e = document.getElementById("raycastStepSliderBar");
+                var eValue = e.value;
+
+                //5 sa nemeni, viac sa nasovi menej deli 2 mocinou
+                rayCastStep = raycastStepCalculation(eValue);
+                setOpacity();
+
+                document.getElementById('RaycastStepValue').innerHTML = rayCastStep.toFixed(7);
+            }
+
+            function trasholdChangeMove(density) {
+                speedupOnMoveStart();
+                trasholdChangeCore(density);
+            }
+
+            function trasholdChange(density) {
+                speedupOnMoveStop();
+                trasholdChangeCore(density);
+            }
+
+            function trasholdChangeCore(density) {
+                intensityT = density / 100.;
+                document.getElementById('TrasholdValue').innerHTML = intensityT.toFixed(2);
+            }
+
+            function cutPlaneDistanceChangeMove(distance) {
+                speedupOnMoveStart();
+                cutPlaneDistanceChangeCore(distance);
+            }
+            function cutPlaneDistanceChange(distance) {
+                speedupOnMoveStop();
+                cutPlaneDistanceChangeCore(distance);
+            }
+
+            function cutPlaneDistanceChangeCore(distance) {
+                var cutPlaneDistance = distance / 100.;
+                camera.near = cutPlaneDistance;
+                camera.updateProjectionMatrix();
+                document.getElementById('CutPlaneValue').innerHTML = cutPlaneDistance.toFixed(2);
+            }
+
+            function setBackground(cb) {
+                if (cb.checked)
+                    renderer.setClearColor(0x333F47);
+                else
+                    renderer.setClearColor(0x000000);
+            }
+
+            function setShader() {
+                var e = document.getElementById("ShaderType");
+                var type = e.options[e.selectedIndex].value;
+
+                if (type == "render")
+                    volumeCube.material = returnMaterialVolumeLUT();
+                else if (type == "xray")
+                    volumeCube.material = returnMaterialVolumeXray();
+                else if (type == "mip")
+                    volumeCube.material = returnMaterialVolumeMip();
+                else if (type == "iso")
+                    volumeCube.material = returnMaterialVolumeIso();
+            }
+
+            function setLUT(lutNo) {
+                if (lutNo == "1")
+                    lutTexture = loader.load("lut/myLut1.png", function myfunction(texture) {
+                        lutTexture = texture;
+                        makeAnimate();
+                    });
+                else if (lutNo == "2")
+                    lutTexture = loader.load("lut/myLut2.png", function myfunction(texture) {
+                        lutTexture = texture;
+                        makeAnimate();
+                    });
+                else if (lutNo == "3")
+                    lutTexture = loader.load("lut/myLut3.png", function myfunction(texture) {
+                        lutTexture = texture;
+                        makeAnimate();
+                    });
+                else if (lutNo == "4")
+                    lutTexture = loader.load("lut/myLut4.png", function myfunction(texture) {
+                        lutTexture = texture;
+                        makeAnimate();
+                    });
+            }
+
+            function setDataset(dsNo) {
+                if (dsNo == 0) {
+                    volumeTexture = hlavaTexture;
+                    sizeInZ = 0.007;
+                }
+                else if (dsNo == 1) {
+                    volumeTexture = oblickyTexture;
+                    sizeInZ = 0.002;
+                }
+                else if (dsNo == 2) {
+                    volumeTexture = torsoTexture;
+                    sizeInZ = 0.0028;
+                }
+                refreshEmtySpaceSkipping(dsNo);
+
+                makeAnimate();
+            }
+
+            function changeQuality(settNo) {
+                if(settNo == "1") {
+                    sizeOfTexture = 4096;
+                    sizeOfImage = 512;
+                    sideImgCount = parseInt(sizeOfTexture / sizeOfImage, 10);
+                }
+                else if (settNo == "2") {
+                    sizeOfTexture = 2048;
+                    sizeOfImage = 256;
+                    sideImgCount = parseInt(sizeOfTexture / sizeOfImage, 10);
+                }
+                else if (settNo == "3") {
+                    sizeOfTexture = 1024;
+                    sizeOfImage = 128;
+                    sideImgCount = parseInt(sizeOfTexture / sizeOfImage, 10);
+                }
+
+                LoadDataset(datasetNumber);
+
+                //var e = document.getElementById("DateSetSelect");
+                //var type = e.options[e.selectedIndex].value;
+                //setDataset(type)
+            }
+        </script>
+
+        <script src="http://www.w3schools.com/lib/w3data.js"></script>
+        <script src="./js/jquery-1.12.3.js"></script>
+        <script src="./js/Stats.js"></script>
+        <script src="./js/three.js"></script>
+        <script src="./js/OrbitControls.js"></script>
+
+        <script src="./DataProcessing.js"></script>
+        <script src="./CutPlane.js"></script>
+        
+
+        <!-- Shaders -->
+
+        <script id="vertex_shader" type="x-shader/x-vertex">
+        </script>
+        <script src="./shaders/fragmet_shader_xray.js" id="xray_fshader" type="x-shader/x-fragment">
+        </script>
+        <script src="./shaders/fragmet_shader_lut.js" id="lut_fshader" type="x-shader/x-fragment">
+        </script>
+        <script src="./shaders/fragmet_shader_mip.js" id="mip_fshader" type="x-shader/x-fragment">
+        </script>
+        <script src="./shaders/fragmet_shader_iso.js" id="iso_fshader" type="x-shader/x-fragment">
+        </script>
+
+        <!-- Loading shader files -->
+        <script>
+            function LoadShaders() {
+                $("#vertex_shader").load("./shaders/vertex_shader.js");
+                $("#xray_fshader").load("./shaders/fragmet_shader_xray.js");
+                $("#lut_fshader").load("./shaders/fragmet_shader_lut.js");
+                $("#mip_fshader").load("./shaders/fragmet_shader_mip.js");
+                $("#iso_fshader").load("./shaders/fragmet_shader_iso.js");
+            }
+        </script>
+
+        <!-- Shaders end -->
+
+        <script>
+            function speedupOnMoveStart() {
+                if (raycastSpeedup && rayCastStep < raycastSpeedupStep) {
+                    rayCastStep = raycastSpeedupStep;
+                    setOpacity();
+                }
+            }
+            function speedupOnMoveStop() {
+                raycastStepChange();
+            }
+            // Nastavenie eventov startu vykreslovania
+            function SetupRenderEvents(canvas) {
+                canvas.onmousedown = function (e) {
+                    speedupOnMoveStart();
+                    startLoop(true);
+                }
+                canvas.onmouseup = function (e) {
+                    speedupOnMoveStop();
+                    startLoop(false);
+                }
+
+                var mousewheelevt = (/Firefox/i.test(navigator.userAgent)) ? "DOMMouseScroll" : "mousewheel" //FF doesn't recognize mousewheel as of FF3.x
+
+                if (canvas.attachEvent) //if IE (and Opera depending on user setting)
+                    canvas.attachEvent("on" + mousewheelevt, zoomSceneRedraw)
+                else if (canvas.addEventListener) //WC3 browsers
+                    canvas.addEventListener(mousewheelevt, zoomSceneRedraw, false)
+
+                function zoomSceneRedraw(e) {
+                    startLoop(true);
+                    startLoop(false);
+                }
+
+                $(window).keydown(function (e) {
+                    if (e.ctrlKey)
+                        speedupOnMoveStart();
+                });
+
+                $(window).keyup(function (e) {
+                    speedupOnMoveStop();
+                    animateCore();
+                });
+            }
+        </script>
+
+        <script>
+            //Konstanta ako vypocitat multiplikator na priehladnost
+            var opacityRaycastMultiple = 37.5;
+            //KONSTANTA, pocet obrazkov ktore bude dokreslovat
+            var postFrameCount = 1;
+            //KONSTANTA, velkost bounding boxu
+            var c_boxSize = 1.;
+            //counter akutalneho obrazku dokreslenia
+            var actualPostFrame = 0;
+            //nastavi cislo datasetu
+            var datasetNumber = getParameterByName("dataset", window.location.href);
+
+            //bool - stav ci bezi rendering
+            var isRunning = false;
+
+            //Mesh
+            var frontCube, backCube, volumeCube, cuttingPlane;
+            //Sceny
+            var scene, backScene, frontScene;
+            //Kamera, renderer
+            var camera, renderer, secondRenderer;
+            //Ovladanie kamery
+            var controls;
+            //Sirka, vyska
+            var WIDTH,
+                HEIGHT;
+            //webGl objekt
+            var gl;
+            //objekt na vypocet cutting plane
+            var planeObject;
+            //podvzorkovany dataset
+            var undersampledData = new Array(3);
+
+            //rozmery textury
+            var sizeOfTexture = 4096;
+            //velkost obrazku v texture
+            var sizeOfImage = 512;
+            //velkost kroku pri raycastingu
+            var rayCastStep = 0.0015;
+            var raycastSpeedup = true;
+            var raycastSpeedupStep = 0.003;
+
+            //multiplier priehladnosti
+            var alphaMul = 0.004;
+            //velkost jedneho dielu(kroku) priehladnosti
+            var alphaMulOneP = rayCastStep / opacityRaycastMultiple;
+            //trashold intenzity pri iso surface
+            var intensityT = 0.95;
+
+            //velkost voxelu v z osi
+            var sizeInZ = 0.007;
+            //pocet obrazkov v jednej osi
+            var sideImgCount = parseInt(sizeOfTexture / sizeOfImage, 10);
+
+            //objekt na nahravanie obrazkov
+            var loader;
+
+            //Textury
+            var frontTexture, backTexture, volumeTexture, lutTexture;
+            var oblickyTexture, hlavaTexture;
+
+            var isLoaded = [false, false, false];
+            var dataImages = new Array(3);
+
+            //w3IncludeHTML();
+            setDefaultQuality();
+
+            //Prida zobrazovanie FPS
+            javascript: (function () { var script = document.createElement('script'); script.onload = function () { var stats = new Stats(); document.body.appendChild(stats.dom); requestAnimationFrame(function loop() { stats.update(); requestAnimationFrame(loop) }); }; script.src = '//rawgit.com/mrdoob/stats.js/master/build/stats.min.js'; document.head.appendChild(script); })()
+
+            //Spustenie inicializacie
+            init();
+            setDefaultLabelValues();
+            speedupOnMoveChange()
+
+            //setShader();
+
+            function setDefaultLabelValues() {
+                document.getElementById('RaycastStepValue').innerHTML = rayCastStep.toFixed(7);
+                document.getElementById('TrasholdValue').innerHTML = intensityT.toFixed(2);
+                document.getElementById('CutPlaneValue').innerHTML = camera.near.toFixed(2);
+            }
+
+            //Nastavenie defaultnej kvality
+            function setDefaultQuality() {
+                sizeOfTexture = 4096;
+                sizeOfImage = 512;
+                rayCastStep = 0.0015;
+                //setOpacity();
+            }
+
+            //Start renderingu
+            function startLoop(state) {
+
+                if (state && !isRunning) {
+                    isRunning = true;
+                    animate();             /// starts loop
+
+                } else if (!state && isRunning) {
+                    isRunning = false;
+                }
+            }
+
+
+            //Nastavenie datasetu
+            function LoadDataset(index) {
+                if(index == 1){
+                    sizeInZ = 0.007;
+                    volumeTexture = preprocessData("volumes/HEAD/", 83, 0);
+                }
+                else if(index == 2){
+                    sizeInZ = 0.002;
+                    volumeTexture = preprocessData("volumes/SET1/", 361, 1);
+                }
+                else if(index == 3){
+                    sizeInZ = 0.0028;
+                    volumeTexture = preprocessData("volumes/TORSO/", 394, 2);
+                }
+            }
+
+            //http://stackoverflow.com/questions/901115/how-can-i-get-query-string-values-in-javascript
+            //Nacita get parameter
+            function getParameterByName(name, url) {
+                if (!url) url = window.location.href;
+                name = name.replace(/[\[\]]/g, "\\$&");
+                var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+                    results = regex.exec(url);
+                if (!results) return null;
+                if (!results[2]) return '';
+                return decodeURIComponent(results[2].replace(/\+/g, " "));
+            }
+
+
+            //Inicializacia
+            function init() {
+
+                for (i = 0; i < 3; i++) {
+                    dataImages[i] = new Array(512);
+                }
+                //Shader files loading
+                LoadShaders();
+
+                // Create the scene and set the scene size.
+                frontScene = new THREE.Scene();
+                scene = new THREE.Scene();
+                backScene = new THREE.Scene();
+
+                WIDTH = 800;
+                HEIGHT = 600;
+
+                // Create a renderer and add it to the DOM.
+                renderer = new THREE.WebGLRenderer({ antialias: true });
+                renderer.setSize(WIDTH, HEIGHT);
+                renderer.setPixelRatio(window.devicePixelRatio);
+                renderer.autoClear = true;
+                document.getElementById("content").appendChild(renderer.domElement);
+
+                var canvas = renderer.domElement;
+                SetupRenderEvents(canvas);
+
+                // Initialize the GL context
+                gl = initWebGL(canvas);
+
+                // Create a camera, zoom it out from the model a bit, and add it to the scene.
+                camera = new THREE.PerspectiveCamera(
+                  35,         // Field of view
+                  WIDTH / HEIGHT,  // Aspect ratio
+                  .1,         // Near
+                  10000       // Far
+                );
+                camera.position.set(2, 2, 2);
+                //nastavi label na aktualnu hodnotu
+                //Vlozenie kamier do scen
+                backScene.add(camera);
+                scene.add(camera);
+                frontScene.add(camera);
+                var light = new THREE.PointLight(0xff0000, 1, 100);
+                light.position.set(50, 50, 50);
+                //scene.add(light);
+
+                // Create an event listener that resizes the renderer with the browser window.
+                window.addEventListener('resize', function () {
+                    renderer.setSize(WIDTH, HEIGHT);
+                    camera.aspect = WIDTH / HEIGHT;
+                    camera.updateProjectionMatrix();
+                });
+
+                // Set the background color of the scene.
+                renderer.setClearColor(0x000000, 0);
+                // Add OrbitControls so that we can pan around with the mouse.
+                controls = new THREE.OrbitControls(camera, renderer.domElement);
+                //Nastavi pohlad kamery do stredu kocky
+                controls.target.set(0.5, 0.5, 0.5);
+
+                //LUT image
+                loader = new THREE.TextureLoader()
+                lutTexture = loader.load("lut/myLut4.png");
+
+                //Load dataset
+                LoadDataset(datasetNumber);
+
+                //Trieda na cutting plane
+                cuttingPlane = new CutPlane(camera, controls);
+
+                //Create cube
+                frontCube = baseFrontCube(jsCubeGeometry(0, 0, 1, c_boxSize));
+                backCube = baseBackCube(jsCubeGeometry(0, 0, 1, c_boxSize));
+
+                //frontScene.add(frontCube);
+                //backScene.add(backCube);
+                //scene.add(jsBlackCube(0, 0, 1, c_boxSize));
+
+                frontTexture = new THREE.WebGLRenderTarget(WIDTH, HEIGHT, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearMipMapNearestFilter, format: THREE.RGBFormat, type: THREE.HalfFloatType });
+                backTexture = new THREE.WebGLRenderTarget(WIDTH, HEIGHT, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearMipMapNearestFilter, format: THREE.RGBFormat, type: THREE.HalfFloatType });
+
+                //create volume cube
+                var cubeGeom = jsCubeGeometry(0, 0, 1, c_boxSize);
+                setCuttingPlaneLines(cubeGeom);
+                volumeCube = rayCube(cubeGeom);
+
+                scene.add(volumeCube);
+            }
+
+            //Zmenenie empty space skipping
+            function refreshEmtySpaceSkipping(datasetIndex) {
+                //zmazanie objektov
+                clearScene(frontScene);
+                clearScene(backScene);
+
+                addUndersampledCubes(datasetIndex);
+            }
+            //Zmaze meshe zo sceny
+            function clearScene(_scene) {
+                for (var i = _scene.children.length - 1; i >= 0; i--) {
+                    if (_scene.children[i] instanceof THREE.Mesh)
+                        _scene.remove(_scene.children[i]);
+                }
+            }
+
+            function addUndersampledCubes(datasetIndex) {
+                var cubeSize = c_boxSize / undersampledSize;
+                var it = 0;
+
+                for (var z = 1.; z > 0.; z -= cubeSize) {
+                    for (var y = 1. - cubeSize; y >= 0.; y -= cubeSize) {
+                        for (var x = 0.; x < 1.; x += cubeSize) {
+                            if (undersampledData[datasetIndex][it + 1] > 0) {
+                                backScene.add(baseBackCube(jsCubeGeometry(x, y, z, cubeSize)));
+                                frontScene.add(baseFrontCube(jsCubeGeometry(x, y, z, cubeSize)));
+                            }
+                            it += 2;
+                        }
+                    }
+                }
+
+                //frontScene.remove(frontCube);
+                //backScene.remove(backCube);
+            }
+
+            function createCubeGeometry(x, y, z, cubeOffset) {
+                var cubeGeometry = new THREE.Geometry();
+
+                var xO = 0;
+                var yO = 0;
+                var zO = 0;
+
+                //Vlozenie vrcholov
+                for (var i = 0; i < 8; i++) {
+                    cubeGeometry.vertices.push(new THREE.Vector3(x + xO, y + yO, z + zO));
+                    //prestavenie honot
+                    if (i == 0 || i == 4) yO = cubeOffset;
+                    else if (i == 1 || i == 5) xO = cubeOffset;
+                    else if (i == 2 || i == 6) yO = 0;
+                    else if (i == 3) { xO = 0; yO = 0; zO = 0; }
+                }
+
+                //Nastavenie farieb
+                for (var i = 0; i < 8; i++) {
+                    cubeGeometry.colors.push(new THREE.Color(cubeGeometry.vertices[i].x, cubeGeometry.vertices[i].y, 1 - cubeGeometry.vertices[i].z));
+                }
+
+                //front
+                cubeGeometry.faces.push(new THREE.Face3(0, 2, 1));
+                cubeGeometry.faces.push(new THREE.Face3(0, 3, 2));
+                //bot
+                cubeGeometry.faces.push(new THREE.Face3(0, 1, 4));
+                cubeGeometry.faces.push(new THREE.Face3(1, 5, 4));
+                //top
+                cubeGeometry.faces.push(new THREE.Face3(2, 7, 6));
+                cubeGeometry.faces.push(new THREE.Face3(3, 7, 2));
+                //left
+                cubeGeometry.faces.push(new THREE.Face3(0, 4, 7));
+                cubeGeometry.faces.push(new THREE.Face3(0, 7, 3));
+                //right
+                cubeGeometry.faces.push(new THREE.Face3(1, 6, 5));
+                cubeGeometry.faces.push(new THREE.Face3(1, 2, 6));
+                //back
+                cubeGeometry.faces.push(new THREE.Face3(5, 6, 7));
+                cubeGeometry.faces.push(new THREE.Face3(5, 7, 4));
+            }
+
+            //http://stackoverflow.com/questions/10330342/threejs-assign-different-colors-to-each-vertex-in-a-geometry
+            //Tvorba kocky pomocou Box geometry
+            function jsCubeGeometry(x, y, z, size) {
+                var face, numberOfSides, vertexIndex;
+                var faceIndices = ['a', 'b', 'c', 'd'];
+
+                //load geometry
+                var cubeGeometry = new THREE.BoxGeometry(size, size, size);
+                cubeGeometry = cubeGeometry.translate(x + size / 2, y + size / 2, z - size / 2);
+
+                //Nastavenie farieb
+                for (var i = 0; i < 8; i++) {
+                    cubeGeometry.colors.push(new THREE.Color(cubeGeometry.vertices[i].x, cubeGeometry.vertices[i].y, 1 - cubeGeometry.vertices[i].z));
+                }
+
+                //nastavenie face colors
+                for (var i = 0; i < cubeGeometry.faces.length; i++) {
+                    face = cubeGeometry.faces[i];
+                    numberOfSides = (face instanceof THREE.Face3) ? 3 : 4;
+                    for (var j = 0; j < numberOfSides; j++) {
+                        vertexIndex = face[faceIndices[j]];
+                        face.vertexColors[j] = cubeGeometry.colors[vertexIndex];
+                    }
+                }
+
+                return cubeGeometry;
+            }
+
+            //Tvorba kocky pomocou Box geometry
+            function jsBlackCube(x, y, z, size) {
+                //load geometry
+                var cubeGeometry = new THREE.BoxGeometry(size, size, size);
+                cubeGeometry = cubeGeometry.translate(x + size / 2, y + size / 2, z - size / 2);
+
+                //load material
+                var cubeMaterial = new THREE.MeshBasicMaterial({
+                    side: THREE.FrontSide,
+                    color: 0x000000,
+                    depthFunc: THREE.LessDepth
+                });
+
+                return new THREE.Mesh(cubeGeometry, cubeMaterial);
+            }
+
+            function setCuttingPlaneLines(cubeGeometry) {
+                cuttingPlane.setLines([]);
+                //hrany kocky, pre testovanie prienikov
+                cuttingPlane.addLine(new THREE.Line3(cubeGeometry.vertices[0], cubeGeometry.vertices[1]));
+                cuttingPlane.addLine(new THREE.Line3(cubeGeometry.vertices[1], cubeGeometry.vertices[3]));
+                cuttingPlane.addLine(new THREE.Line3(cubeGeometry.vertices[3], cubeGeometry.vertices[2]));
+                cuttingPlane.addLine(new THREE.Line3(cubeGeometry.vertices[2], cubeGeometry.vertices[0]));
+
+                cuttingPlane.addLine(new THREE.Line3(cubeGeometry.vertices[0], cubeGeometry.vertices[5]));
+                cuttingPlane.addLine(new THREE.Line3(cubeGeometry.vertices[1], cubeGeometry.vertices[4]));
+                cuttingPlane.addLine(new THREE.Line3(cubeGeometry.vertices[2], cubeGeometry.vertices[7]));
+                cuttingPlane.addLine(new THREE.Line3(cubeGeometry.vertices[3], cubeGeometry.vertices[6]));
+
+                cuttingPlane.addLine(new THREE.Line3(cubeGeometry.vertices[4], cubeGeometry.vertices[5]));
+                cuttingPlane.addLine(new THREE.Line3(cubeGeometry.vertices[5], cubeGeometry.vertices[7]));
+                cuttingPlane.addLine(new THREE.Line3(cubeGeometry.vertices[7], cubeGeometry.vertices[6]));
+                cuttingPlane.addLine(new THREE.Line3(cubeGeometry.vertices[6], cubeGeometry.vertices[4]));
+
+                return cubeGeometry;
+            }
+
+            function baseFrontCube(cubeGeometry) {
+                var cubeMaterial = new THREE.MeshBasicMaterial({
+                    side: THREE.DoubleSide,
+                    vertexColors: THREE.VertexColors
+                });
+
+                return new THREE.Mesh(cubeGeometry, cubeMaterial);
+            }
+
+            function baseBackCube(cubeGeometry) {
+                var cubeMaterial = new THREE.MeshBasicMaterial({
+                    side: THREE.BackSide,
+                    vertexColors: THREE.VertexColors,
+                    depthFunc: THREE.GreaterDepth
+                });
+
+                return new THREE.Mesh(cubeGeometry, cubeMaterial);
+            }
+
+            function rayCube(cubeGeometry) {
+                var e = document.getElementById("ShaderType");
+                var type = e.options[e.selectedIndex].value;
+
+                if (type == "render")
+                    shaderMaterial = returnMaterialVolumeLUT();
+                else if (type == "xray")
+                    shaderMaterial = returnMaterialVolumeXray();
+                else if (type == "mip")
+                    shaderMaterial = returnMaterialVolumeMip();
+                else if (type == "iso")
+                    shaderMaterial = returnMaterialVolumeIso();
+
+                return new THREE.Mesh(cubeGeometry, shaderMaterial);
+            }
+
+            function returnMaterialVolumeXray() {
+                var baseUniforms = {
+                    frontFace: { type: "t", value: frontTexture },
+                    backFace: { type: "t", value: backTexture },
+                    volume1: { type: "t", value: volumeTexture[0] },
+                    volume2: { type: "t", value: volumeTexture[1] },
+                    volume3: { type: "t", value: volumeTexture[2] },
+                    volume4: { type: "t", value: volumeTexture[3] },
+                    volume5: { type: "t", value: volumeTexture[4] },
+                    volume6: { type: "t", value: volumeTexture[5] },
+                    volume7: { type: "t", value: volumeTexture[6] },
+                    volume8: { type: "t", value: volumeTexture[7] },
+                    size: { type: "v2", value: new THREE.Vector2(WIDTH, HEIGHT) },
+                    alphaMultiplier: { type: "f", value: alphaMul },
+                    cntInRow: { type: "i", value: sideImgCount },
+                    step: { type: "f", value: rayCastStep },
+                    zSize: { type: "f", value: sizeInZ }
+                };
+                var shaderMaterial =
+                new THREE.ShaderMaterial({
+                    side: THREE.DoubleSide,
+                    uniforms: baseUniforms,
+                    vertexShader: document.getElementById('vertex_shader').innerHTML,
+                    fragmentShader: document.getElementById('xray_fshader').innerHTML
+                });
+
+                return shaderMaterial;
+            }
+
+            function returnMaterialVolumeLUT() {
+                var lightPosition = camera.position.clone();
+                lightPosition.z = 1.0 - lightPosition.z;
+                var norm = cuttingPlane.Normal.clone();
+                norm.z = 1 - norm.z;
+
+                var uniforms = {
+                    frontFace: { type: "t", value: frontTexture },
+                    backFace: { type: "t", value: backTexture },
+                    volume1: { type: "t", value: volumeTexture[0] },
+                    volume2: { type: "t", value: volumeTexture[1] },
+                    volume3: { type: "t", value: volumeTexture[2] },
+                    volume4: { type: "t", value: volumeTexture[3] },
+                    volume5: { type: "t", value: volumeTexture[4] },
+                    volume6: { type: "t", value: volumeTexture[5] },
+                    volume7: { type: "t", value: volumeTexture[6] },
+                    volume8: { type: "t", value: volumeTexture[7] },
+                    transferFce: { type: "t", value: lutTexture },
+                    size: { type: "v2", value: new THREE.Vector2(WIDTH, HEIGHT) },
+                    alphaMultiplier: { type: "f", value: alphaMul },
+                    cntInRow: { type: "i", value: sideImgCount },
+                    step: { type: "f", value: rayCastStep },
+                    zSize: { type: "f", value: sizeInZ },
+                    texelSize: { type: "f", value: 1. / sizeOfTexture },
+                    lightPos: { type: "v3", value: lightPosition }
+                    //intensityTreshold: { type: "f", value: intensityT }
+                };
+
+                var shaderMaterial =
+                new THREE.ShaderMaterial({
+                    side: THREE.DoubleSide,
+                    uniforms: uniforms,
+                    vertexShader: document.getElementById('vertex_shader').innerHTML,
+                    fragmentShader: document.getElementById('lut_fshader').innerHTML
+                });
+
+                return shaderMaterial;
+            }
+
+            function returnMaterialVolumeMip() {
+                var baseUniforms = {
+                    frontFace: { type: "t", value: frontTexture },
+                    backFace: { type: "t", value: backTexture },
+                    volume1: { type: "t", value: volumeTexture[0] },
+                    volume2: { type: "t", value: volumeTexture[1] },
+                    volume3: { type: "t", value: volumeTexture[2] },
+                    volume4: { type: "t", value: volumeTexture[3] },
+                    volume5: { type: "t", value: volumeTexture[4] },
+                    volume6: { type: "t", value: volumeTexture[5] },
+                    volume7: { type: "t", value: volumeTexture[6] },
+                    volume8: { type: "t", value: volumeTexture[7] },
+                    size: { type: "v2", value: new THREE.Vector2(WIDTH, HEIGHT) },
+                    alphaMultiplier: { type: "f", value: alphaMul },
+                    cntInRow: { type: "i", value: sideImgCount },
+                    step: { type: "f", value: rayCastStep },
+                    zSize: { type: "f", value: sizeInZ }
+                };
+                var shaderMaterial =
+                new THREE.ShaderMaterial({
+                    side: THREE.DoubleSide,
+                    uniforms: baseUniforms,
+                    vertexShader: document.getElementById('vertex_shader').innerHTML,
+                    fragmentShader: document.getElementById('mip_fshader').innerHTML
+                });
+
+                return shaderMaterial;
+            }
+
+            function returnMaterialVolumeIso() {
+                var lightPosition = camera.position.clone();
+                lightPosition.z = 1.0 - lightPosition.z;
+
+                var baseUniforms = {
+                    frontFace: { type: "t", value: frontTexture },
+                    backFace: { type: "t", value: backTexture },
+                    volume1: { type: "t", value: volumeTexture[0] },
+                    volume2: { type: "t", value: volumeTexture[1] },
+                    volume3: { type: "t", value: volumeTexture[2] },
+                    volume4: { type: "t", value: volumeTexture[3] },
+                    volume5: { type: "t", value: volumeTexture[4] },
+                    volume6: { type: "t", value: volumeTexture[5] },
+                    volume7: { type: "t", value: volumeTexture[6] },
+                    volume8: { type: "t", value: volumeTexture[7] },
+                    size: { type: "v2", value: new THREE.Vector2(WIDTH, HEIGHT) },
+                    alphaMultiplier: { type: "f", value: alphaMul },
+                    cntInRow: { type: "i", value: sideImgCount },
+                    step: { type: "f", value: rayCastStep },
+                    zSize: { type: "f", value: sizeInZ },
+                    textureSide: { type: "i", value: sizeOfTexture },
+                    texelSize: { type: "f", value: 1. / sizeOfTexture },
+                    intensityTreshold: { type: "f", value: intensityT },
+                    lightPos: { type: "v3", value: lightPosition }
+                };
+
+                var shaderMaterial =
+                new THREE.ShaderMaterial({
+                    side: THREE.DoubleSide,
+                    uniforms: baseUniforms,
+                    vertexShader: document.getElementById('vertex_shader').innerHTML,
+                    fragmentShader: document.getElementById('iso_fshader').innerHTML
+                });
+
+                return shaderMaterial;
+            }
+
+            function animate() {
+
+                // Read more about requestAnimationFrame at http://www.paulirish.com/2011/requestanimationframe-for-smart-animating/
+                if (isRunning) {
+                    requestAnimationFrame(animate);
+                    animateCore();
+                }
+                else {
+                    actualPostFrame = 0;
+                    postAnimate();
+                }
+            }
+
+            function animateCore() {
+
+                controls.update();
+
+                //Vypocet cutting plane
+                var planeGeometry = cuttingPlane.cutBox();
+                var planeObject = baseFrontCube(planeGeometry);
+
+                //pridanie noveho cutting plane
+                if (planeObject != undefined) {
+                    frontScene.add(planeObject);
+                }
+
+
+                // Render front cube.
+                renderer.render(frontScene, camera, frontTexture, true);
+
+                //nastavenie depth bufferu na hodnotu 0
+                gl.clearDepth(0.0);
+                renderer.clearDepth();
+
+                // Render back cube.
+                renderer.render(backScene, camera, backTexture, true);
+                gl.clearDepth(1.0);
+
+                setShader();
+
+                //ray casting
+                renderer.render(scene, camera);
+
+                //zmazanie cutting plane
+                if (planeObject != undefined) {
+                    frontScene.remove(planeObject);
+                }
+            }
+
+            function postAnimate() {
+                if (actualPostFrame < postFrameCount && !isRunning)
+                    requestAnimationFrame(postAnimate);
+
+                actualPostFrame++;
+                animateCore();
+            }
+
+            function initWebGL(canvas) {
+                gl = null;
+
+                try {
+                    // Try to grab the standard context. If it fails, fallback to experimental.
+                    gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+                }
+                catch (e) { }
+
+                // If we don't have a GL context, give up now
+                if (!gl) {
+                    alert("Unable to initialize WebGL. Your browser may not support it.");
+                    gl = null;
+                }
+
+                return gl;
+            }
+        </script>
+    </body>
+</html>

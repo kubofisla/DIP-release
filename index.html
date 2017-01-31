@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Rendering Volumetric Data in Web Browser</title>
+    <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+<body>
+
+
+    <div id="indexContent" align="center">
+        <h1>Master's thesis</h1>
+        <h2>Rendering Volumetric Data in Web Browser</h2>
+        <h3>Choose one of the datasets</h3>
+
+        <button class="indexButton" id="headButton" type="button" onclick="window.location.href = 'basicGUI.html?dataset=1'">Head</button>
+        <button class="indexButton" id="oblickyButton" type="button" onclick="window.location.href = 'basicGUI.html?dataset=2'">Kidneys</button>
+        <button class="indexButton" id="torsoButton" type="button" onclick="window.location.href = 'basicGUI.html?dataset=3'">Torso</button></br>
+        <button class="indexButton" id="footsButton" type="button" onclick="window.location.href = 'basicGUI.html?dataset=5'">Foot</button>
+        <button class="indexButton" id="teethsButton" type="button" onclick="window.location.href = 'basicGUI.html?dataset=6'">Dental scan</button></br>
+        <button class="indexButton" id="childButton" type="button" onclick="window.location.href = 'basicGUI.html?dataset=4'"><div>Repair of facial deformity</div></button>
+        <button class="indexButton" id="heartButton" type="button" onclick="window.location.href = 'basicGUI.html?dataset=7'">Heart - normal arteries</button>
+
+        <!--<div class="qualityComboSettings" align="center">
+            <label class="settingsItem">Data image quality</label>
+            <select class="settingsItem" id="QualitySelect" onchange="changeQuality(this.value)">
+                <option value="1">Original</option>
+                <option value="2">Medium</option>
+                <option value="3">Low</option>
+            </select>
+        </div>-->
+    </div>
+</body>
+</html>

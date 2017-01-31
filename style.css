@@ -1,0 +1,93 @@
+body {
+    background-color: black;
+    color: whitesmoke;
+    font-family: Tahoma, Geneva, sans-serif;
+}
+
+.indexButton {
+    font-family: Tahoma, Geneva, sans-serif;
+    background-color: #3e3e3e;
+    border-radius: 20px;
+    border:hidden;
+    font-size: 25px;
+    color: whitesmoke;
+    width: 200px;
+    height: 130px;
+    margin: 15px auto;
+}
+
+#indexContent {
+    width: 100%;
+}
+
+#content {
+    float: left;
+    z-index: 1;
+    margin: 47px 0 0 0;
+    padding: 0;
+}
+
+#settings {
+    float: right;
+    text-align: center;
+    display:block;
+    width: 200px;
+    background-color: #232323;
+    padding: 20px;
+    border-radius: 15px;
+    position:absolute;
+    right: 0;
+    z-index: 2;
+}
+
+.settingsItem {
+    float: left;
+    width: 100%;
+    margin: 5px 0px;
+    padding: 0px;
+    text-align: left;
+    font-size: 10px;
+}
+
+.inputSettings {
+    width: 100%;
+    margin: 5px 0px;
+}
+
+.inputComboSettings {
+    width: 100%;
+    margin: 5px 0px;
+    font-size: 10px;
+    padding: 2px;
+}
+
+.qualityComboSettings {
+    width: 200px;
+    margin: 5px auto;
+    font-size: 10px;
+    padding: 2px;
+}
+
+.se-pre-con {
+    position: fixed;
+	width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+	z-index: 99998;
+	background: url(img/Preloader_3.gif) fixed center no-repeat #fff;
+}
+
+.se-pre-con-text{
+    position: fixed;
+	width: 200px;
+    height: 200px;
+    top: 50%;
+    left: 50%;
+    margin-top: -120px;
+    margin-left: -100px;
+    padding-top: 150px;
+	z-index: 99999;
+    text-align: center;
+    color: darkcyan;
+}

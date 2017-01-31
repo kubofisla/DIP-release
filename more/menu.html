@@ -1,0 +1,26 @@
+<!--<select class="settingsItem" id="DateSetSelect" onchange="setDataset(this.value)">
+                <option value="0">Hlava</option>
+                <option value="1">Ladviny</option>
+                <option value="2">Torso</option>
+            </select>-->
+<select class="settingsItem" id="LutSelect" onchange="setLUT(this.value)">
+    <option value="4">Light hard tissue</option>
+    <option value="1">Muscle</option>
+    <option value="2">Light muscle</option>
+    <option value="3">Hard tissue</option>
+</select>
+<select class="settingsItem" id="ShaderType" onchange="makeAnimate()">
+    <option value="xray">X-Ray</option>
+    <option value="render">Render</option>
+    <option value="mip">MIP</option>
+    <option value="iso">Iso-surface</option>
+</select>
+<select class="settingsItem"; margin:auto;" id="QualitySelect" onchange="changeQuality(this.value)">
+    <option value="1">High</option>
+    <option value="2">Medium</option>
+    <option value="3">Low</option>
+</select>
+<input class="settingsItem" type="range" id="sliderBar" min="0" max="100" step="1" value="50" onChange="setOpacity(this.value);" onInput="setOpacity(this.value);" />
+<label><input type='checkbox' onclick='setBackground(this);' onInput='setBackground(this);'>Debug background</label>
+<input class="settingsItem" type="range" id="sliderBar" min="0" max="100" step="1" value="5" onChange="trasholdChange(this.value);" onInput="trasholdChange(this.value);" /> <label id="TrasholdLabel">Dens. trashold</label>
+<input class="settingsItem" type="range" id="cutPlaneSliderBar" min="0" max="300" step="0.1" value="10" onChange="cutPlaneDistanceChange(this.value);" onInput="cutPlaneDistanceChange(this.value);" /> <label id="CutPlaneLabel">Cut Plane distance</label>
